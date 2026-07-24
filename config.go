@@ -25,8 +25,8 @@ type RemoteConfig struct {
 }
 
 // ConfigURL is the URL where the remote config.json is hosted.
-// E.g. https://raw.githubusercontent.com/shadow11001/Assistant-Updater/main/config.json
-const ConfigURL = "https://raw.githubusercontent.com/shadow11001/Assistant-Updater/main/config.json"
+// E.g. https://raw.githubusercontent.com/shadow11001/Assistant-Updater/master/config.json
+const ConfigURL = "https://raw.githubusercontent.com/shadow11001/Assistant-Updater/master/config.json"
 
 // getDocumentsDir dynamically finds the current user's Documents folder.
 func getDocumentsDir() (string, error) {
