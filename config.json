@@ -1,0 +1,17 @@
+{
+  "delete": false,
+  "apps": [
+    {
+      "name": "Dispatch-Assistant",
+      "owner": "shadow11001",
+      "repo": "Dispatch-Assistant",
+      "versionCheckFile": "js/defaultConfig.js"
+    },
+    {
+      "name": "Alarm-Assistant",
+      "owner": "shadow11001",
+      "repo": "Alarm_Alert_Assistant",
+      "versionCheckFile": "js/defaultConfig.js"
+    }
+  ]
+}

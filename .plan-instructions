@@ -1,0 +1,40 @@
+# Project: Standalone Auto-Updater for Apps (Go)
+
+Please build an autonomous, zero-dependency Go executable that retrieves and installs the latest releases of my private GitHub repositories for Windows users. It also needs to check for updates and a remote self-destruct signal.
+
+## Requirements & Steps
+
+1. **Token Obfuscation / Encryption:** 
+   - Hardcode an encrypted version of a Fine-Grained (Read-Only) GitHub API token in the Go source code.
+   - The app must decrypt it at runtime in memory to authenticate API requests cleanly.
+
+2. **Self-Destruct Check:** 
+   - Ping a specific endpoint/file in a central GitHub repository (e.g., a `killswitch.json` or `status.txt`). 
+   - If a "delete" flag is detected, execute a self-deletion routine that terminates the process and removes the `updater.exe` from disk, leaving the actual apps intact. Use the standard Windows `cmd.exe` trick (spawn detached cmd that waits, deletes the binary, and shuts down while Go exits) since Windows prevents deleting running executables.
+
+3. **App Discovery & Version Checking:** 
+   - Resolve the user's `Documents` folder dynamically.
+   - Target two folders: "Dispatch-Assistant" and "Alarm-Assistant".
+   - For each folder:
+     - If the folder does *not* exist: Proceed to download the latest release.
+     - If the folder *exists*: Open `<AppFolder>\js\defaultConfig.js`, parse the current version string, and compare it to the API response from `api.github.com/repos/owner/repo/releases/latest`.
+
+4. **Download & Extract:** 
+   - If an update is required (or folder missing), download the `.zip` release asset.
+   - Extract contents to a temp folder, and overwrite the app folder in `Documents`.
+
+## Architecture & Suggested Files
+
+Create a new Go module with the following file structure:
+- `main.go` — Orchestration: Self-destruct check, update loop.
+- `config.go` — App definitions, API repo URLs, and document paths.
+- `crypto.go` — AES/XOR decryption for the API token.
+- `updater.go` — Logic for API fetching, downloading, and extracting ZIPs.
+- `utils.go` — Logic for reading `js/defaultConfig.js` to parse versions, and the self-deletion command hack.
+
+## Technical Decisions & Constraints
+- **Language:** Go (Golang) compiled to a single Windows executable (`go build -ldflags="-H windowsgui" -o updater.exe`).
+- **Paths:** Hardcoded to target the user's `Documents` directory for both apps, ensuring no Admin rights are needed.
+- **Dependencies:** Strictly zero external runtime dependencies on the target host. 
+
+Please scaffold this Go project, including setting up the `go.mod` file, providing a helper script or logic to encrypt the GitHub token beforehand, and writing the complete source code for the files listed above.
