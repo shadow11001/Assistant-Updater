@@ -13,8 +13,9 @@ import (
 
 // GitHubRelease represents the structure of the GitHub API response for a release
 type GitHubRelease struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
+	TagName    string `json:"tag_name"`
+	ZipballURL string `json:"zipball_url"`
+	Assets     []struct {
 		Name               string `json:"name"`
 		URL                string `json:"url"`
 		BrowserDownloadURL string `json:"browser_download_url"`

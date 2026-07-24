@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
+var appVersion = "dev" // Overridden at build time via ldflags
+
 func main() {
-	fmt.Println("Starting Assistant Updater...")
+	fmt.Printf("Starting Assistant Updater (Version: %s)...\n", appVersion)
 
 	// 1. Decrypt Master Token
 	masterToken, err := decryptToken()
@@ -35,7 +38,50 @@ func main() {
 		os.Exit(0) // Should not reach here if selfDestruct succeeds, but just in case
 	}
 
-	// 4. Update Loop for Apps
+	// 4. Self-Update Check
+	fmt.Println("Checking for self-updates...")
+	selfRelease, err := getLatestRelease("shadow11001", "Assistant-Updater", masterToken)
+	if err == nil {
+		remoteVer := strings.TrimPrefix(selfRelease.TagName, "v")
+		localVer := strings.TrimPrefix(appVersion, "v")
+		
+		updaterName := filepath.Base(os.Args[0]) // usually "updater.exe"
+
+		if localVer != "dev" && localVer != remoteVer {
+			fmt.Printf("Self-update found: v%s -> v%s. Updating...\n", localVer, remoteVer)
+			
+			// Find the updater.exe asset
+			var updaterDownloadUrl string
+			for _, asset := range selfRelease.Assets {
+				if strings.ToLower(asset.Name) == "updater.exe" {
+					updaterDownloadUrl = asset.URL
+					break
+				}
+			}
+
+			if updaterDownloadUrl != "" {
+				newUpdaterPath := filepath.Join(os.TempDir(), "updater_new.exe")
+				if err := downloadReleaseAsset(updaterDownloadUrl, masterToken, newUpdaterPath); err == nil {
+					// We successfully downloaded the new executable.
+					// We must replace the running executable using the CMD hack
+					exePath, _ := os.Executable()
+					
+					// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe 
+					cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
+					cmd := exec.Command("cmd.exe", "/C", cmdStr)
+					
+					if err := cmd.Start(); err == nil {
+						fmt.Println("Self-update downloaded, restarting...")
+						os.Exit(0)
+					}
+				}
+			}
+		}
+	} else {
+		fmt.Printf("Warning: Failed to check for self-update: %v\n", err)
+	}
+
+	// 5. Update Loop for Apps
 	docsDir, err := getDocumentsDir()
 	if err != nil {
 		log.Fatalf("Failed to resolve Documents directory: %v", err)
@@ -85,6 +131,11 @@ func main() {
 
 		// Find the ZIP asset
 		var zipDownloadUrl string
+		// Fallback to the auto-generated Source Code Zipball if no explicit .zip asset is attached to the release
+		if release.ZipballURL != "" {
+			zipDownloadUrl = release.ZipballURL
+		}
+		
 		for _, asset := range release.Assets {
 			if strings.HasSuffix(strings.ToLower(asset.Name), ".zip") {
 				// GitHub standard API provides an asset URL we can stream from using Accept headers
@@ -94,7 +145,7 @@ func main() {
 		}
 
 		if zipDownloadUrl == "" {
-			fmt.Printf("Error: No .zip asset found in the latest release of %s.\n", app.Name)
+			fmt.Printf("Error: No .zip asset or source code zipball found in the latest release of %s.\n", app.Name)
 			continue
 		}
 

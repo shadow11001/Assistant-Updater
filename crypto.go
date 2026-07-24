@@ -10,9 +10,9 @@ import (
 // In a real build, we will replace these with the actual hex strings using a build script or by hand.
 // We use variables instead of constants so they can be injected dynamically via ldflags if preferred.
 var (
-	masterKeyHex   = "e99a7835516b73c0be7aadf06c0ee20d8f6cc6e95170940f79dc8e47df5424b0"
-	masterNonceHex = "fabee448f25ffc9291aac3ef"
-	masterTokenHex = "58f67b8dcb2509c3dd84678ca5f1eb98ddb1b95707332454b290dece137260d14144e87ffaea4610d8c3ca9dcc328561cab339e4d98b3f7a1292d261454c8aeadc6c839c7e495b73d8fa4911062e9149c9158621cd6ac2d7163303878cf0c4e03161de132fa1f2a3a8d400238e"
+	masterKeyHex   = "replace_with_32_byte_hex_key"
+	masterNonceHex = "replace_with_12_byte_hex_nonce"
+	masterTokenHex = "replace_with_hex_ciphertext"
 )
 
 // decryptToken takes the hardcoded hex strings and decrypts the original token
