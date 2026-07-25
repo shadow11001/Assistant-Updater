@@ -42,10 +42,11 @@ jobs:
           # Build a hidden-window GUI executable for Windows, injecting the release tag as the appVersion
           # Force CGO_ENABLED=0 to ensure pure static windows executable without external dependencies
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-X main.appVersion=${{ github.ref_name }} -H windowsgui -s -w" -o updater.exe .
+          zip updater.zip updater.exe
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: Release ${{ github.ref_name }}
-          files: updater.exe
+          files: updater.zip
