@@ -74,144 +74,145 @@ func main() {
 					extractDir := filepath.Join(os.TempDir(), "updater_extracted")
 					if err := extractZip(tempUpdaterZip, extractDir); err == nil {
 						newUpdaterPath := filepath.Join(extractDir, "updater.exe")
-						
+
 						// We must replace the running executable using the CMD hack
 						exePath, _ := os.Executable()
 
-					// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe
-					cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
-					cmd := exec.Command("cmd.exe", "/C", cmdStr)
+						// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe
+						cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
+						cmd := exec.Command("cmd.exe", "/C", cmdStr)
 
-					if err := cmd.Start(); err == nil {
-						logToDisk("Self-update downloaded, restarting...")
-						os.Exit(0)
+						if err := cmd.Start(); err == nil {
+							logToDisk("Self-update downloaded, restarting...")
+							os.Exit(0)
+						}
+					} else {
+						logToDisk("Failed to download self-update asset: %v", err)
 					}
-				} else {
-					logToDisk("Failed to download self-update asset: %v", err)
 				}
 			}
-		}
-	} else {
-		logToDisk("Warning: Failed to check for self-update: %v", err)
-	}
-
-	// 5. Update Loop for Apps
-	docsDir, err := getDocumentsDir()
-	if err != nil {
-		errMsg := fmt.Sprintf("Failed to resolve Documents directory: %v", err)
-		logToDisk(errMsg)
-		showMessage("Updater Error", errMsg, true)
-		os.Exit(1)
-	}
-
-	for _, app := range config.Apps {
-		logToDisk("\n--- Processing %s ---", app.Name)
-
-		// Determine the token to use for this app
-		appToken := app.Token
-		if appToken == "" {
-			appToken = masterToken
-		}
-
-		// Check current local version
-		currentVer, err := getCurrentVersion(docsDir, app)
-		if err != nil {
-			logToDisk("Warning: Could not parse current version (maybe it's missing or corrupted): %v", err)
-			currentVer = "" // Treat as needing install
-		}
-
-		if currentVer != "" {
-			logToDisk("Current local version: %s", currentVer)
 		} else {
-			logToDisk("App not found or no version info. Proceeding to install/update.")
+			logToDisk("Warning: Failed to check for self-update: %v", err)
 		}
 
-		// Fetch latest release info
-		release, err := getLatestRelease(app.Owner, app.Repo, appToken)
+		// 5. Update Loop for Apps
+		docsDir, err := getDocumentsDir()
 		if err != nil {
-			errMsg := fmt.Sprintf("Error: Failed to fetch latest release for %s/%s: %v", app.Owner, app.Repo, err)
+			errMsg := fmt.Sprintf("Failed to resolve Documents directory: %v", err)
 			logToDisk(errMsg)
-			errorMessages = append(errorMessages, errMsg)
-			continue
+			showMessage("Updater Error", errMsg, true)
+			os.Exit(1)
 		}
 
-		logToDisk("Latest remote version: %s", release.TagName)
+		for _, app := range config.Apps {
+			logToDisk("\n--- Processing %s ---", app.Name)
 
-		// Normalize versions for basic string comparison (strip leading 'v' if present)
-		localV := strings.TrimPrefix(currentVer, "v")
-		remoteV := strings.TrimPrefix(release.TagName, "v")
-
-		if localV == remoteV && localV != "" {
-			logToDisk("App %s is up to date.", app.Name)
-			continue
-		}
-
-		logToDisk("Update required for %s. Finding ZIP asset...", app.Name)
-
-		// Find the ZIP asset
-		var zipDownloadUrl string
-		// Fallback to the auto-generated Source Code Zipball if no explicit .zip asset is attached to the release
-		if release.ZipballURL != "" {
-			zipDownloadUrl = release.ZipballURL
-		}
-
-		for _, asset := range release.Assets {
-			if strings.HasSuffix(strings.ToLower(asset.Name), ".zip") {
-				// GitHub standard API provides an asset URL we can stream from using Accept headers
-				zipDownloadUrl = asset.URL
-				break
+			// Determine the token to use for this app
+			appToken := app.Token
+			if appToken == "" {
+				appToken = masterToken
 			}
+
+			// Check current local version
+			currentVer, err := getCurrentVersion(docsDir, app)
+			if err != nil {
+				logToDisk("Warning: Could not parse current version (maybe it's missing or corrupted): %v", err)
+				currentVer = "" // Treat as needing install
+			}
+
+			if currentVer != "" {
+				logToDisk("Current local version: %s", currentVer)
+			} else {
+				logToDisk("App not found or no version info. Proceeding to install/update.")
+			}
+
+			// Fetch latest release info
+			release, err := getLatestRelease(app.Owner, app.Repo, appToken)
+			if err != nil {
+				errMsg := fmt.Sprintf("Error: Failed to fetch latest release for %s/%s: %v", app.Owner, app.Repo, err)
+				logToDisk(errMsg)
+				errorMessages = append(errorMessages, errMsg)
+				continue
+			}
+
+			logToDisk("Latest remote version: %s", release.TagName)
+
+			// Normalize versions for basic string comparison (strip leading 'v' if present)
+			localV := strings.TrimPrefix(currentVer, "v")
+			remoteV := strings.TrimPrefix(release.TagName, "v")
+
+			if localV == remoteV && localV != "" {
+				logToDisk("App %s is up to date.", app.Name)
+				continue
+			}
+
+			logToDisk("Update required for %s. Finding ZIP asset...", app.Name)
+
+			// Find the ZIP asset
+			var zipDownloadUrl string
+			// Fallback to the auto-generated Source Code Zipball if no explicit .zip asset is attached to the release
+			if release.ZipballURL != "" {
+				zipDownloadUrl = release.ZipballURL
+			}
+
+			for _, asset := range release.Assets {
+				if strings.HasSuffix(strings.ToLower(asset.Name), ".zip") {
+					// GitHub standard API provides an asset URL we can stream from using Accept headers
+					zipDownloadUrl = asset.URL
+					break
+				}
+			}
+
+			if zipDownloadUrl == "" {
+				errMsg := fmt.Sprintf("Error: No .zip asset or source code zipball found in the latest release of %s.", app.Name)
+				logToDisk(errMsg)
+				errorMessages = append(errorMessages, errMsg)
+				continue
+			}
+
+			// Prepare temp file path for the downloaded zip
+			tempZipPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%s.zip", app.Name, release.TagName))
+
+			// Download
+			logToDisk("Downloading asset...")
+			if err := downloadReleaseAsset(zipDownloadUrl, appToken, tempZipPath); err != nil {
+				errMsg := fmt.Sprintf("Error: Failed to download asset: %v", err)
+				logToDisk(errMsg)
+				errorMessages = append(errorMessages, errMsg)
+				continue
+			}
+
+			// Extract over the existing destination
+			destPath := filepath.Join(docsDir, app.Name)
+			logToDisk("Extracting to %s...", destPath)
+
+			if err := extractZip(tempZipPath, destPath); err != nil {
+				errMsg := fmt.Sprintf("Error: Failed to extract zip: %v", err)
+				logToDisk(errMsg)
+				errorMessages = append(errorMessages, errMsg)
+				continue
+			}
+
+			// Cleanup downloaded zip
+			os.Remove(tempZipPath)
+
+			successMsg := fmt.Sprintf("Successfully updated %s to %s.", app.Name, release.TagName)
+			logToDisk(successMsg)
+			successMessages = append(successMessages, successMsg)
 		}
 
-		if zipDownloadUrl == "" {
-			errMsg := fmt.Sprintf("Error: No .zip asset or source code zipball found in the latest release of %s.", app.Name)
-			logToDisk(errMsg)
-			errorMessages = append(errorMessages, errMsg)
-			continue
+		logToDisk("\nUpdate process complete.")
+
+		// Construct final dialog message
+		if len(errorMessages) > 0 {
+			finalMsg := "Update finished with errors:\n\n" + strings.Join(errorMessages, "\n")
+			if len(successMessages) > 0 {
+				finalMsg += "\n\nSuccessful updates:\n" + strings.Join(successMessages, "\n")
+			}
+			showMessage("Assistant Updater - Issues Detected", finalMsg, true)
+		} else if len(successMessages) > 0 {
+			finalMsg := "Successfully applied updates:\n\n" + strings.Join(successMessages, "\n")
+			showMessage("Assistant Updater", finalMsg, false)
 		}
-
-		// Prepare temp file path for the downloaded zip
-		tempZipPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%s.zip", app.Name, release.TagName))
-
-		// Download
-		logToDisk("Downloading asset...")
-		if err := downloadReleaseAsset(zipDownloadUrl, appToken, tempZipPath); err != nil {
-			errMsg := fmt.Sprintf("Error: Failed to download asset: %v", err)
-			logToDisk(errMsg)
-			errorMessages = append(errorMessages, errMsg)
-			continue
-		}
-
-		// Extract over the existing destination
-		destPath := filepath.Join(docsDir, app.Name)
-		logToDisk("Extracting to %s...", destPath)
-
-		if err := extractZip(tempZipPath, destPath); err != nil {
-			errMsg := fmt.Sprintf("Error: Failed to extract zip: %v", err)
-			logToDisk(errMsg)
-			errorMessages = append(errorMessages, errMsg)
-			continue
-		}
-
-		// Cleanup downloaded zip
-		os.Remove(tempZipPath)
-
-		successMsg := fmt.Sprintf("Successfully updated %s to %s.", app.Name, release.TagName)
-		logToDisk(successMsg)
-		successMessages = append(successMessages, successMsg)
-	}
-
-	logToDisk("\nUpdate process complete.")
-
-	// Construct final dialog message
-	if len(errorMessages) > 0 {
-		finalMsg := "Update finished with errors:\n\n" + strings.Join(errorMessages, "\n")
-		if len(successMessages) > 0 {
-			finalMsg += "\n\nSuccessful updates:\n" + strings.Join(successMessages, "\n")
-		}
-		showMessage("Assistant Updater - Issues Detected", finalMsg, true)
-	} else if len(successMessages) > 0 {
-		finalMsg := "Successfully applied updates:\n\n" + strings.Join(successMessages, "\n")
-		showMessage("Assistant Updater", finalMsg, false)
 	}
 }
