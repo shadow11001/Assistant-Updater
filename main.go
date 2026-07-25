@@ -88,11 +88,18 @@ func main() {
 							exePath, _ := os.Executable()
 
 							logToDisk("Hotswapping binaries. Replacing %s with %s", exePath, newUpdaterPath)
-							// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe 
-							cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
-							logToDisk("Exec: %s", cmdStr)
-							
-							cmd := exec.Command("cmd.exe", "/C", cmdStr)
+							// We write a temporary batch script to handle the hotswap correctly, 
+							// avoiding nested quote issues in cmd.exe /C
+							batPath := filepath.Join(os.TempDir(), "updater_hotswap.bat")
+							batContent := fmt.Sprintf(`@echo off
+ping 127.0.0.1 -n 3 > nul
+move /Y "%s" "%s"
+start "" "%s"
+del "%%~f0"`, newUpdaterPath, exePath, exePath)
+							os.WriteFile(batPath, []byte(batContent), 0644)
+
+							cmd := exec.Command("cmd.exe", "/C", batPath)
+							logToDisk("Exec script generated at: %s", batPath)
 
 							if err := cmd.Start(); err == nil {
 								logToDisk("Self-update downloaded and cmd spawned! Restarting app and terminating current process...")
