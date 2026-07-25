@@ -5,7 +5,6 @@
       "name": "Dispatch-Assistant",
       "owner": "shadow11001",
       "repo": "Dispatch-Assistant",
-      "branch": "release/v1.0.6",
       "versionCheckFile": "js/defaultConfig.js"
     },
     {
