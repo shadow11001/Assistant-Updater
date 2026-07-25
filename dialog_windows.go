@@ -31,7 +31,7 @@ func logToDisk(msg string, a ...interface{}) {
 	formatted := fmt.Sprintf(msg, a...)
 
 	// Create or append to a log file in Temp directory
-	logPath := os.TempDir() + "\\AssistantUpdater.log"
+	logPath := filepath.Join(os.TempDir(), "AssistantUpdater.log")
 	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
 		defer f.Close()

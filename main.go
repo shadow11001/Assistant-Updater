@@ -42,7 +42,7 @@ func main() {
 		os.Exit(0) // Should not reach here if selfDestruct succeeds, but just in case
 	}
 
-	// 4. Self-Update Check
+		// 4. Self-Update Check
 	logToDisk("Checking for self-updates...")
 	selfRelease, err := getLatestRelease("shadow11001", "Assistant-Updater", masterToken)
 	if err == nil {
@@ -63,32 +63,49 @@ func main() {
 
 			// If the manual updater.zip asset is missing/fails, fallback to the zipball (which now contains it)
 			if updaterDownloadUrl == "" && selfRelease.ZipballURL != "" {
+				logToDisk("No attached updater.zip found, falling back to zipball.")
 				updaterDownloadUrl = selfRelease.ZipballURL
 			}
 
 			if updaterDownloadUrl != "" {
 				tempUpdaterZip := filepath.Join(os.TempDir(), "updater_update.zip")
+				
+				logToDisk("Downloading self-updater payload from: %s", updaterDownloadUrl)
 				if err := downloadReleaseAsset(updaterDownloadUrl, masterToken, tempUpdaterZip); err == nil {
 					// We successfully downloaded the zip.
 					// Extract it to temp dir
 					extractDir := filepath.Join(os.TempDir(), "updater_extracted")
+					logToDisk("Extracting self-update zip to: %s", extractDir)
+					
 					if err := extractZip(tempUpdaterZip, extractDir); err == nil {
 						newUpdaterPath := filepath.Join(extractDir, "updater.exe")
+						logToDisk("Extracted successfully. Verifying expected exe exists at: %s", newUpdaterPath)
+						
+						if _, statErr := os.Stat(newUpdaterPath); statErr != nil {
+							logToDisk("Could not find updater.exe inside extracted zip: %v", statErr)
+						} else {
+							// We must replace the running executable using the CMD hack
+							exePath, _ := os.Executable()
 
-						// We must replace the running executable using the CMD hack
-						exePath, _ := os.Executable()
+							logToDisk("Hotswapping binaries. Replacing %s with %s", exePath, newUpdaterPath)
+							// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe 
+							cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
+							logToDisk("Exec: %s", cmdStr)
+							
+							cmd := exec.Command("cmd.exe", "/C", cmdStr)
 
-						// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe
-						cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
-						cmd := exec.Command("cmd.exe", "/C", cmdStr)
-
-						if err := cmd.Start(); err == nil {
-							logToDisk("Self-update downloaded, restarting...")
-							os.Exit(0)
+							if err := cmd.Start(); err == nil {
+								logToDisk("Self-update downloaded and cmd spawned! Restarting app and terminating current process...")
+								os.Exit(0)
+							} else {
+								logToDisk("Failed to spawn CMD update process: %v", err)
+							}
 						}
 					} else {
-						logToDisk("Failed to download self-update asset: %v", err)
+						logToDisk("Failed to extract self-update asset: %v", err)
 					}
+				} else {
+					logToDisk("Failed to download self-update asset zip: %v", err)
 				}
 			}
 		} else {
