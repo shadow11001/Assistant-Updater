@@ -52,21 +52,26 @@ func main() {
 		if localVer != "dev" && localVer != remoteVer {
 			logToDisk("Self-update found: v%s -> v%s. Updating...", localVer, remoteVer)
 
-			// Find the updater.exe asset
+			// Find the updater.zip asset (since we now upload a zip to circumvent firewalls)
 			var updaterDownloadUrl string
 			for _, asset := range selfRelease.Assets {
-				if strings.ToLower(asset.Name) == "updater.exe" {
+				if strings.ToLower(asset.Name) == "updater.zip" {
 					updaterDownloadUrl = asset.URL
 					break
 				}
 			}
 
 			if updaterDownloadUrl != "" {
-				newUpdaterPath := filepath.Join(os.TempDir(), "updater_new.exe")
-				if err := downloadReleaseAsset(updaterDownloadUrl, masterToken, newUpdaterPath); err == nil {
-					// We successfully downloaded the new executable.
-					// We must replace the running executable using the CMD hack
-					exePath, _ := os.Executable()
+				tempUpdaterZip := filepath.Join(os.TempDir(), "updater_update.zip")
+				if err := downloadReleaseAsset(updaterDownloadUrl, masterToken, tempUpdaterZip); err == nil {
+					// We successfully downloaded the zip.
+					// Extract it to temp dir
+					extractDir := filepath.Join(os.TempDir(), "updater_extracted")
+					if err := extractZip(tempUpdaterZip, extractDir); err == nil {
+						newUpdaterPath := filepath.Join(extractDir, "updater.exe")
+						
+						// We must replace the running executable using the CMD hack
+						exePath, _ := os.Executable()
 
 					// cmd sequence: wait 2s, move/overwrite old exe with new exe, then launch the new exe
 					cmdStr := fmt.Sprintf("ping 127.0.0.1 -n 3 > nul & move /Y \"%s\" \"%s\" & start \"\" \"%s\"", newUpdaterPath, exePath, exePath)
