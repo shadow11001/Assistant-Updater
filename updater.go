@@ -67,8 +67,8 @@ func downloadReleaseAsset(downloadUrl, token, destPath string) error {
 	if token != "" {
 		req.Header.Add("Authorization", "Bearer "+token)
 	}
-	
-	// Only add octet-stream accept header if it's a true release asset. 
+
+	// Only add octet-stream accept header if it's a true release asset.
 	// If it's a generated zipball_url, GitHub returns a 415 error if we force octet-stream.
 	if !strings.Contains(downloadUrl, "zipball") {
 		req.Header.Add("Accept", "application/octet-stream")
