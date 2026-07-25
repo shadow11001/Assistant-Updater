@@ -46,21 +46,6 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-X main.appVersion=${{ github.ref_name }} -H windowsgui -s -w" -o updater.exe .
           zip updater.zip updater.exe
           
-      - name: Commit Zip to Source (Fallback)
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add updater.zip
-          # We check if there's anything to commit in case it didn't change
-          git commit -m "Auto-add latest updater.zip to target branch" || echo "No changes to commit"
-          # Since this action fires on a tag push, github.ref is refs/tags/v1.0.X
-          # We need to push the commit back to the master branch where it belongs
-          git push origin HEAD:master
-          
-          # Force push the current tag to point to our newly created commit so the zipball has it
-          git tag -f ${{ github.ref_name }}
-          git push -f origin refs/tags/${{ github.ref_name }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')

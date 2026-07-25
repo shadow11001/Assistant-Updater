@@ -21,9 +21,9 @@ func getCurrentVersion(docsDir string, app AppTarget) (string, error) {
 		return "", err
 	}
 
-	// This regex looks for 'version' followed by quotes. E.g., version: "v1.2.3" or version="1.2.3"
+	// This regex looks for 'version' followed by quotes. E.g., "version": "v1.2.3" or version="1.2.3"
 	// It extracts the contents of the quotes.
-	re := regexp.MustCompile(`version\s*[:=]\s*["']([^"']+)["']`)
+	re := regexp.MustCompile(`["']?version["']?\s*[:=]\s*["']([^"']+)["']`)
 	matches := re.FindSubmatch(bytes)
 
 	if len(matches) > 1 {
