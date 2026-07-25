@@ -110,7 +110,20 @@ func extractZip(src, dest string) error {
 	}
 
 	for _, f := range r.File {
-		fpath := filepath.Join(dest, f.Name)
+		// GitHub zipballs often contain a root directory styled as "owner-repo-commit/".
+		// We want to strip out the top-level folder so the contents dump directly into 'dest'.
+		cleanedName := f.Name
+		firstSlash := strings.Index(cleanedName, "/")
+		if firstSlash != -1 {
+			cleanedName = cleanedName[firstSlash+1:]
+		}
+
+		// If the original file was *just* that root folder itself, skip it.
+		if cleanedName == "" {
+			continue
+		}
+
+		fpath := filepath.Join(dest, cleanedName)
 
 		// Check for ZipSlip (Directory traversal attack)
 		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
