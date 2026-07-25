@@ -44,8 +44,6 @@ func main() {
 	if err == nil {
 		remoteVer := strings.TrimPrefix(selfRelease.TagName, "v")
 		localVer := strings.TrimPrefix(appVersion, "v")
-		
-		updaterName := filepath.Base(os.Args[0]) // usually "updater.exe"
 
 		if localVer != "dev" && localVer != remoteVer {
 			fmt.Printf("Self-update found: v%s -> v%s. Updating...\n", localVer, remoteVer)
