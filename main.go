@@ -44,7 +44,7 @@ func main() {
 
 		// 4. Self-Update Check
 	logToDisk("Checking for self-updates...")
-	selfRelease, err := getLatestRelease("shadow11001", "Assistant-Updater", masterToken)
+	selfRelease, err := getLatestRelease("shadow11001", "Assistant-Updater", "", masterToken)
 	if err == nil {
 		remoteVer := strings.TrimPrefix(selfRelease.TagName, "v")
 		localVer := strings.TrimPrefix(appVersion, "v")
@@ -144,7 +144,7 @@ func main() {
 			}
 
 			// Fetch latest release info
-			release, err := getLatestRelease(app.Owner, app.Repo, appToken)
+			release, err := getLatestRelease(app.Owner, app.Repo, app.Branch, appToken)
 			if err != nil {
 				errMsg := fmt.Sprintf("Error: Failed to fetch latest release for %s/%s: %v", app.Owner, app.Repo, err)
 				logToDisk(errMsg)

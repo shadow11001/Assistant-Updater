@@ -22,9 +22,22 @@ type GitHubRelease struct {
 	} `json:"assets"`
 }
 
-// getLatestRelease fetches the release metadata for the target repository
-func getLatestRelease(owner, repo, token string) (*GitHubRelease, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+// getLatestRelease fetches the release metadata for the target repository.
+// If a branch is specified, it uses that branch instead of the latest release.
+func getLatestRelease(owner, repo, branch, token string) (*GitHubRelease, error) {
+	var url string
+	if branch != "" {
+		// Use a specific branch
+		url = fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", owner, repo, branch)
+		// We'll return a mock GitHubRelease with the zipball URL
+		return &GitHubRelease{
+			TagName:    branch, // use branch name as tag
+			ZipballURL: url,
+		}, nil
+	} else {
+		// Use the latest release
+		url = fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

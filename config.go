@@ -14,6 +14,7 @@ type AppTarget struct {
 	Name             string `json:"name"`             // Folder name in Documents, e.g., "Dispatch-Assistant"
 	Owner            string `json:"owner"`            // GitHub Owner, e.g. "shadow11001"
 	Repo             string `json:"repo"`             // GitHub Repo, e.g., "Dispatch-Assistant"
+	Branch           string `json:"branch,omitempty"` // Branch to pull from, e.g., "dev" (defaults to latest release if omitted)
 	VersionCheckFile string `json:"versionCheckFile"` // Relative path to version file, e.g. "js/defaultConfig.js"
 	Token            string `json:"token,omitempty"`  // Optional per-app token. If omitted, master token can be used if appropriate.
 }
