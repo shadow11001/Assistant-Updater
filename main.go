@@ -61,6 +61,11 @@ func main() {
 				}
 			}
 
+			// If the manual updater.zip asset is missing/fails, fallback to the zipball (which now contains it)
+			if updaterDownloadUrl == "" && selfRelease.ZipballURL != "" {
+				updaterDownloadUrl = selfRelease.ZipballURL
+			}
+
 			if updaterDownloadUrl != "" {
 				tempUpdaterZip := filepath.Join(os.TempDir(), "updater_update.zip")
 				if err := downloadReleaseAsset(updaterDownloadUrl, masterToken, tempUpdaterZip); err == nil {
