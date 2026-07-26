@@ -41,6 +41,9 @@ jobs:
 
       - name: Build Windows Executable
         run: |
+          # Generate the syso file to embed the manifest using rsrc
+          go run github.com/akavel/rsrc -manifest updater.manifest -o rsrc.syso
+
           # Build a hidden-window GUI executable for Windows, injecting the release tag as the appVersion
           # Force CGO_ENABLED=0 to ensure pure static windows executable without external dependencies
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-X main.appVersion=${{ github.ref_name }} -H windowsgui -s -w" -o updater.exe .
